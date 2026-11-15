@@ -7,3 +7,57 @@
 /* 案例說明保留投影片中的換行 */
 .case-box{white-space:pre-line}
 .form-grid label{display:block;margin-bottom:7px}
+
+
+/* v3｜語音回答：每一個文字欄位旁的麥克風操作 */
+.voice-tools{display:flex;align-items:center;flex-wrap:wrap;gap:9px 12px;margin:8px 0 14px;min-height:38px}
+.voice-btn{flex:0 0 auto;min-height:37px;background:#e6f3ee;border:1px solid #b6dcd1;color:#145e59;border-radius:999px;padding:7px 14px;font-size:12px;font-weight:850;line-height:1.4;transition:background .12s,border-color .12s}
+.voice-btn:hover:not(:disabled){background:#d2ebe1;border-color:#79b8a7}
+.voice-btn.is-listening{background:#fff0ef;color:#a6272b;border-color:#ee9b9c;box-shadow:0 0 0 3px rgba(206,46,50,.08)}
+.voice-btn.is-listening::before{content:'';display:inline-block;width:7px;height:7px;background:#d8363c;border-radius:50%;margin-right:6px;animation:voice-pulse 1s ease-in-out infinite}
+.voice-status{color:#536e6d;font-size:12px;line-height:1.5;flex:1 1 200px}
+.voice-privacy{font-size:12px;color:#647776;border-left:3px solid #9fd3c6;background:#eef8f3;padding:9px 12px;border-radius:5px;margin:16px 0}
+textarea[readonly]{background:#f7faf7;border-color:#94c9b9}
+@keyframes voice-pulse{50%{opacity:.25;transform:scale(.75)}}
+@media(max-width:700px){.voice-tools{align-items:flex-start}.voice-status{flex:1 1 100%}.voice-btn{min-height:42px}}
+@media(prefers-reduced-motion:reduce){.voice-btn.is-listening::before{animation:none}}
+
+
+/* v4｜教師可投影、學員可閱讀的全班匿名觀點牆 */
+.share-consent{background:#f0f8f4;border:1px solid #cbe4d8;border-radius:13px;padding:12px 14px;font-size:13px;line-height:1.7}
+.share-consent input{width:18px;height:18px;flex:none}
+.wall-open-btn{display:block;width:100%;margin-top:17px;white-space:normal;text-align:center}
+.wall-shade{position:fixed;inset:0;z-index:2000;background:rgba(12,30,32,.76);padding:clamp(8px,2vw,25px);display:grid;place-items:center}
+.wall-open{overflow:hidden}
+.wall-sheet{display:block;background:#f5f7f3;color:#19373a;border-radius:23px;width:min(1300px,100%);height:min(94vh,100%);overflow:auto;box-shadow:0 25px 70px rgba(0,0,0,.4);padding:clamp(18px,3vw,44px)}
+.wall-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:1px solid #d5dfd8;padding-bottom:22px}
+.wall-eyebrow{font-size:12px;font-weight:900;letter-spacing:.13em;color:#0a746c}
+.wall-top h2{font-size:clamp(27px,4vw,48px);line-height:1.15;margin:10px 0 5px;letter-spacing:-.035em}
+.wall-top p{font-size:14px;color:#60767b;margin:3px 0}
+.wall-close{flex:none;border:1px solid #b6d0c6;background:#fff;border-radius:999px;color:#19373a;padding:10px 18px;font-size:13px;font-weight:900}
+.wall-toolbar{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:24px 0}
+.wall-toolbar>div:not(.wall-prompt){border-radius:12px;padding:10px 19px;background:#e5f3eb;display:flex;align-items:center;gap:9px}
+.wall-toolbar strong{font-size:23px;color:#0a746c;font-weight:950}
+.wall-toolbar span{font-size:12px;color:#52726b}
+.wall-prompt{font-size:13px;color:#705624;background:#f9eccc;padding:12px 18px;border-radius:12px;margin-left:auto}
+.wall-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin:18px 0 28px}
+.wall-stat{background:#fff;border-radius:13px;padding:15px 17px;border:1px solid #dce5dd}
+.wall-stat>div:first-child{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;font-size:12px;line-height:1.4}
+.wall-stat b{font-size:13px;max-width:77%}.wall-stat span{white-space:nowrap;font-weight:850;color:#0a746c}
+.wall-track{height:8px;background:#e1eae3;border-radius:5px;margin-top:11px;overflow:hidden}.wall-track span{display:block;height:100%;background:#0a746c;border-radius:5px}
+.wall-headline{display:flex;justify-content:space-between;align-items:baseline;gap:14px;margin:26px 0 12px}
+.wall-headline h3{font-size:24px;letter-spacing:-.025em;margin:0}.wall-headline span{font-size:13px;color:#56726d}
+.wall-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:19px}
+.wall-filter{background:#fff;border:1px solid #bfd4cc;padding:7px 16px;border-radius:999px;font-size:13px;color:#466b64;font-weight:800}
+.wall-filter.selected{background:#0a746c;color:#fff;border-color:#0a746c}
+.wall-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:14px}
+.wall-entry{background:#fff;border-radius:17px;border:1px solid #d9e5de;padding:19px 21px;box-shadow:0 10px 20px -22px #17383a;overflow-wrap:anywhere}
+.wall-entry[hidden]{display:none}
+.wall-entry-head{display:flex;align-items:center;gap:9px;margin-bottom:14px;color:#19373a;font-size:14px}
+.wall-avatar{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#dcf4e7;color:#0a746c}
+.wall-tag{display:inline-flex;gap:5px;font-size:12px;color:#08685f;background:#e8f6ef;font-weight:900;padding:4px 10px;border-radius:8px;margin:0 6px 8px 0}
+.wall-item-label{color:#0a746c;font-size:12px;font-weight:900;margin:12px 0 3px}
+.wall-copy{font-size:14px;line-height:1.75;white-space:pre-wrap;color:#385b55}
+.wall-empty{background:#fff;border:1px dashed #abcfc4;border-radius:16px;padding:28px;text-align:center;color:#52726b;grid-column:1/-1}
+.wall-footer-note{font-size:12px;color:#6e7a76;padding:26px 0 2px;margin:12px 0}
+@media(max-width:760px){.wall-shade{padding:0}.wall-sheet{height:100dvh;max-height:100dvh;width:100%;border-radius:0;padding:23px 17px}.wall-top{gap:7px}.wall-close{padding:8px 12px;font-size:12px}.wall-toolbar{gap:8px}.wall-prompt{margin-left:0;width:100%}.wall-grid{grid-template-columns:1fr}}

@@ -8,7 +8,7 @@ const HOST_MODE = PARAMS.get('mode') === 'host';
 const LS_DEMO = 'assessment-lab-slide-sync-v2-demo';
 const LS_LAST_NAME = 'assessment-lab-v1-last-name';
 const LS_DRAFT_PREFIX = 'assessment-lab-slide-sync-v2-draft-';
-const API_VERSION = 'slidesync-2026-11-v2';
+const API_VERSION = 'slidesync-2026-11-v4-wall';
 const MISSIONS = [
   {
     id:'S02', slide:'02', short:'暖身觀察', type:'choice', section:'投影片 02｜暖身',
@@ -66,6 +66,148 @@ if(CFG.FOOTER_CREDIT) credit.textContent = CFG.FOOTER_CREDIT;
 const state = {name:'', currentId:'S02', student:null, hostPin:'', admin:null, drafts:{}, busy:false};
 let toastTimer;
 
+
+/* 語音轉文字：只改前端，伺服器仍然只收到文字答案。 */
+const SpeechEngine = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let voiceSession = null;
+
+function cancelVoice(silent=true) {
+  const old=voiceSession;
+  if(!old)return;
+  if(silent){
+    voiceSession=null;
+    old.textarea.readOnly=false;
+    try{old.engine.abort();}catch(_){}
+    return;
+  }
+  if(!old.stopping){
+    old.stopping=true;
+    old.button.textContent='正在停止…';
+    old.status.textContent='正在整理辨識文字，請稍候。';
+    try{old.engine.stop();}catch(_){
+      old.button.textContent='🎙 開始語音輸入';
+      old.textarea.readOnly=false;
+      voiceSession=null;
+    }
+  }
+}
+
+function combineSpoken(base,spoken){
+  const prior=String(base||'').trimEnd();
+  const now=String(spoken||'').trim();
+  if(!now)return prior;
+  return prior+(prior&&!/[\s\n，。；！？：]$/.test(prior)?' ':'')+now;
+}
+
+function addVoiceControls(){
+  const form=document.getElementById('missionForm');
+  if(!form)return;
+  form.querySelectorAll('textarea').forEach(textarea=>{
+    if(textarea.nextElementSibling?.classList.contains('voice-tools'))return;
+    const line=document.createElement('div');
+    line.className='voice-tools';
+    const button=document.createElement('button');
+    button.className='voice-btn';
+    button.type='button';
+    button.textContent='🎙 語音輸入';
+    button.setAttribute('aria-pressed','false');
+    const status=document.createElement('span');
+    status.className='voice-status';
+    status.setAttribute('role','status');
+    status.setAttribute('aria-live','polite');
+    status.textContent=SpeechEngine
+      ?'說完後可直接修改文字，再按「送出」。'
+      :'此瀏覽器未提供網頁語音辨識；可用手機鍵盤的麥克風聽寫。';
+    if(!SpeechEngine){button.disabled=true;button.title='目前瀏覽器不支援網頁語音辨識';}
+    else button.addEventListener('click',()=>toggleSpeech(textarea,button,status));
+    line.append(button,status);
+    textarea.insertAdjacentElement('afterend',line);
+  });
+  const share=form.querySelector('.checkline');
+  if(share){
+    const note=document.createElement('p');
+    note.className='voice-privacy';
+    note.textContent='語音先轉為文字，確認後才送出；本站不另行儲存錄音。語音辨識可能由瀏覽器服務處理，請勿說出可識別學生身分的資訊。';
+    share.before(note);
+  }
+}
+
+function toggleSpeech(textarea,button,status){
+  if(voiceSession?.textarea===textarea){cancelVoice(false);return;}
+  cancelVoice(true);
+  if(!SpeechEngine){status.textContent='此瀏覽器未支援語音辨識。';return;}
+  if(!window.isSecureContext){status.textContent='麥克風需要安全連線。請從 HTTPS 的 GitHub Pages 網址開啟。';return;}
+  let engine;
+  try{engine=new SpeechEngine();}catch(_){status.textContent='無法啟動語音辨識，請直接輸入文字。';return;}
+  engine.lang='zh-TW';
+  engine.continuous=true;
+  engine.interimResults=true;
+  engine.maxAlternatives=1;
+  const session={engine,textarea,button,status,base:textarea.value,gotText:false,stopping:false,error:''};
+  voiceSession=session;
+  textarea.readOnly=true; // 避免辨識進行中打字內容被中途結果覆蓋
+  button.textContent='■ 停止聆聽';
+  button.classList.add('is-listening');
+  button.setAttribute('aria-pressed','true');
+  status.textContent='準備開啟麥克風，請允許權限…';
+  engine.onstart=()=>{
+    if(voiceSession===session)status.textContent='🔴 正在聆聽…說完按「停止聆聽」。';
+  };
+  engine.onresult=(event)=>{
+    if(voiceSession!==session || !textarea.isConnected)return;
+    let spoken='';
+    let hasFinal=false;
+    for(let i=0;i<event.results.length;i++){
+      const res=event.results[i];
+      if(res.isFinal)hasFinal=true;
+      spoken+=String(res[0]?.transcript||'').trim();
+    }
+    const text=combineSpoken(session.base,spoken);
+    const limit=textarea.maxLength>0?textarea.maxLength:5000;
+    textarea.value=text.slice(0,limit);
+    textarea.dispatchEvent(new Event('input',{bubbles:true}));
+    session.gotText=!!spoken;
+    status.textContent=text.length>limit-5
+      ?'已接近文字上限，請停止並檢查內容。'
+      :hasFinal?'已辨識成文字，可繼續說或按停止。':'正在辨識…';
+    if(text.length>=limit){try{engine.stop();}catch(_){}}
+  };
+  engine.onerror=(event)=>{
+    if(voiceSession!==session)return;
+    const messages={
+      'not-allowed':'未取得麥克風權限。請在瀏覽器允許麥克風。',
+      'service-not-allowed':'瀏覽器阻止語音辨識服務。請改用手機鍵盤聽寫。',
+      'no-speech':'沒有收到聲音，請按麥克風重試。',
+      'audio-capture':'找不到可用的麥克風，請檢查裝置設定。',
+      'network':'語音辨識服務連線失敗，請檢查網路。',
+      'language-not-supported':'目前裝置不支援繁體中文語音辨識。'
+    };
+    session.error=messages[event.error]||'語音辨識暫時無法使用，請改用打字。';
+    status.textContent=session.error;
+  };
+  engine.onend=()=>{
+    if(voiceSession!==session)return;
+    voiceSession=null;
+    textarea.readOnly=false;
+    button.textContent='🎙 再次語音輸入';
+    button.classList.remove('is-listening');
+    button.setAttribute('aria-pressed','false');
+    if(!session.error){
+      status.textContent=session.gotText
+        ?'已完成語音轉文字，請檢查後再按「送出」。'
+        :'未收到可辨識的語音，可重試或直接打字。';
+    }
+  };
+  try{engine.start();}catch(_){
+    voiceSession=null;
+    textarea.readOnly=false;
+    button.textContent='🎙 語音輸入';
+    button.classList.remove('is-listening');
+    button.setAttribute('aria-pressed','false');
+    status.textContent='無法啟動麥克風，請檢查瀏覽器權限或改用打字。';
+  }
+}
+
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function formatCount(n){return Number(n||0).toLocaleString('zh-TW');}
 function el(id){return document.getElementById(id);}
@@ -76,7 +218,7 @@ function normalizeName(s){return String(s||'').replace(/\s+/g,' ').trim();}
 function keyName(s){return normalizeName(s).normalize('NFKC').toLocaleLowerCase();}
 function showToast(msg){const t=el('toast');t.textContent=msg;t.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('visible'),4000);}
 function missionCount(){return MISSIONS.filter(m=>Boolean(state.student?.missions?.[m.id]?.myAnswer)).length;}
-function getDraft(id){return state.drafts[id]||(state.student?.missions?.[id]?.myAnswer)||{choices:[],reason:'',area:'',task:'',evidence:'',support:'',sharePublic:false};}
+function getDraft(id){return state.drafts[id]||(state.student?.missions?.[id]?.myAnswer)||{choices:[],reason:'',area:'',task:'',evidence:'',support:'',sharePublic:true};}
 function demoNotice(){return DEMO?'<div class="notice demo-notice"><strong>本機試玩模式</strong>｜資料只保存在目前的瀏覽器，不會寫入 Google Sheet。正式全班同步請使用已部署的 GitHub Pages 網址（不要加 ?demo=1）。</div>':'';}
 function uuid(){return (crypto?.randomUUID?.() || 'r'+Date.now()+'_'+Math.random().toString(36).slice(2));}
 
@@ -101,7 +243,7 @@ async function apiGet(query){
   if(DEMO) return demoGet(query);
   const data=await jsonp(query);
   if(!data||data.ok!==true)throw new Error(data?.error||'伺服器未能完成讀取。');
-  if(['health','student','admin'].includes(query.action) && data.version!==API_VERSION) throw new Error('Google Apps Script 還是舊版。請換成「投影片同步版 Code.gs」，執行 setup()，再將現有 Web App 更新到新版本。');
+  if(['health','student','admin'].includes(query.action) && data.version!==API_VERSION) throw new Error('你的 Google Apps Script 尚未更新到「全班觀點牆 v4」。請更新 Code.gs 並編輯現有 Web App 部署。');
   return data;
 }
 const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
@@ -141,8 +283,8 @@ function getDemoTask(db,m,name){
   const myAnswer=db.answers[keyName(name)+'|'+m.id]||null;
   const released=!!db.releases[m.id] || (db.expectedCount>0&&rows.length>=db.expectedCount);
   const options=m.type==='choice'?m.options.map(([id,label])=>({id,label,count:rows.filter(x=>(x.choices||[]).includes(id)).length})):m.type==='design'?m.areas.map(id=>({id,label:id,count:rows.filter(x=>x.area===id).length})):[];
-  const comments=rows.filter(x=>x.sharePublic&&db.commentsRelease?.[m.id]).map(x=>({name:x.name,reason:x.reason,area:x.area,task:x.task,evidence:x.evidence,support:x.support})).slice(-50).reverse();
-  return {count:rows.length,released,commentsOpen:!!db.commentsRelease?.[m.id],unlocked:released&&!!myAnswer,myAnswer,result:released&&myAnswer?{count:rows.length,options,comments}:null};
+  const comments=released?rows.filter(x=>x.sharePublic).map((x,i)=>({name:'匿名觀點 '+String(i+1).padStart(2,'0'),choices:x.choices||[],reason:x.reason,area:x.area,task:x.task,evidence:x.evidence,support:x.support})).slice(0,200):[];
+  return {count:rows.length,released,commentsOpen:released,unlocked:released&&!!myAnswer,myAnswer,result:released&&myAnswer?{count:rows.length,options,comments}:null};
 }
 function demoGet(q){
   const db=readDemo();
@@ -150,12 +292,13 @@ function demoGet(q){
   if(q.action==='student')return {ok:true,name:q.name,exists:!!db.people[keyName(q.name)],participantCount:Object.keys(db.people).length,expectedCount:db.expectedCount,missions:Object.fromEntries(MISSIONS.map(m=>[m.id,getDemoTask(db,m,q.name)]))};
   if(q.action==='admin'){
     if(!String(q.pin||''))return {ok:false,error:'請輸入主持人密碼（試玩模式可任意輸入）。'};
-    return {ok:true,expectedCount:db.expectedCount,participants:Object.values(db.people),missions:Object.fromEntries(MISSIONS.map(m=>{const x=getDemoTask(db,m,'');return [m.id,{count:x.count,manualReveal:!!db.releases[m.id],released:x.released,commentsOpen:!!db.commentsRelease?.[m.id]}]})),answers:Object.values(db.answers)};
+    return {ok:true,expectedCount:db.expectedCount,participants:Object.values(db.people),missions:Object.fromEntries(MISSIONS.map(m=>{const x=getDemoTask(db,m,'');return [m.id,{count:x.count,manualReveal:!!db.releases[m.id],released:x.released,commentsOpen:x.released}]})),answers:Object.values(db.answers)};
   }
   return {ok:false,error:'未知的操作'};
 }
 
 function renderLanding(){
+  cancelVoice(true);
   modeLabel.textContent='INTERACTIVE / 05 MISSIONS';headerAction.hidden=true;
   app.innerHTML=`<main class="page-main">
     ${demoNotice()}
@@ -177,7 +320,7 @@ function renderLanding(){
       <div class="intro-steps" aria-label="活動流程">
         <div class="step-tile"><span class="step-icon">01</span><div><strong>先判斷｜看見孩子的表現</strong><p>從語言、溝通與動作情境找出可能的能力線索。</p></div></div>
         <div class="step-tile"><span class="step-icon">02</span><div><strong>再蒐證｜說出你的評量依據</strong><p>答案可以修改；重點不在猜標準答案，而在提出證據。</p></div></div>
-        <div class="step-tile"><span class="step-icon">03</span><div><strong>一起討論｜看見全班的不同觀點</strong><p>全班達到設定人數，或主持教師公布後，才會顯示結果。</p></div></div>
+        <div class="step-tile"><span class="step-icon">03</span><div><strong>一起討論｜看見全班的不同觀點</strong><p>全班達到設定人數，或主持教師公布後，即可閱讀已同意分享的匿名觀點。</p></div></div>
       </div>
     </section></main>`;
   el('joinForm').onsubmit=join;
@@ -246,8 +389,8 @@ function renderMission(m){
     <h2>${esc(m.title)}</h2><div class="case-box"><strong>CASE FILE · 觀察檔案</strong>${esc(m.caseText)}</div>
     <p class="question">${esc(m.question)}</p><p class="subquestion">${esc(m.instruction)}</p>
     <form id="missionForm">${m.type==='choice'?choiceFields:m.type==='design'?designFields:reflectionFields}
-      <label class="checkline"><input id="sharePublic" type="checkbox" ${d.sharePublic?'checked':''}>
-      <span>我同意將本題的文字說明和姓名展示在全班結果中（選項統計不受此設定影響；預設不公開）。</span></label>
+      <label class="checkline share-consent"><input id="sharePublic" type="checkbox" ${d.sharePublic?'checked':''}>
+      <span><strong>同意匿名分享</strong>：我願意在教師公布後，讓同學閱讀本題的文字回答（<strong>不顯示姓名</strong>）。新作答預設勾選，可取消；過去未同意公開的作答不會自動曝光。</span></label>
       <div class="mission-controls"><div><button type="submit" id="saveBtn" class="btn">${done?'更新我的回答':'送出這一關'} <span aria-hidden="true">✓</span></button>
       <p id="formError" class="error-label" role="alert"></p></div>
       <button type="button" class="btn secondary" data-next>${missionIndex(m.id)===MISSIONS.length?'回到第一關':'下一關 →'}</button></div>
@@ -269,10 +412,12 @@ function renderResult(m){
       const label=m.type==='choice'?`${o.id}　${o.label}`:o.label;
       return `<div class="result-row"><div class="result-info"><strong>${esc(label)}</strong><span>${o.count} 人 · ${pct}%</span></div><div class="result-bar" role="img" aria-label="${esc(label)}：${o.count} 人"><span style="width:${Math.round(o.count/max*100)}%"></span></div></div>`;
     }).join('');
-    const comments=(result.comments||[]).map(c=>`<div class="peer-comment"><b>${esc(c.name||'參與者')}</b>${m.type==='choice'?`<p>${esc(c.reason||'')}</p>`:m.type==='design'?`<p><strong>${esc(c.area||'')}</strong>｜觀察：${esc(c.task||'')}</p><p>待釐清：${esc(c.evidence||'')}</p><p>蒐證方式：${esc(c.support||'')}</p><p>紀錄指標：${esc(c.reason||'')}</p>`:`<p>想觀察：${esc(c.task||'')}</p><p>蒐證方式：${esc(c.evidence||'')}</p>`}</div>`).join('');
+    const replies=result.comments||[];
+    const comments=replies.slice(0,3).map(c=>`<div class="peer-comment"><b>${esc(c.name||'匿名觀點')}</b>${m.type==='choice'?`<p><span class="mini-badge">選擇 ${esc((c.choices||[]).join('、')||'—')}</span></p><p>${esc(c.reason||'')}</p>`:m.type==='design'?`<p><strong>${esc(c.area||'')}</strong>｜觀察：${esc(c.task||'')}</p><p>待釐清：${esc(c.evidence||'')}</p><p>蒐證方式：${esc(c.support||'')}</p><p>紀錄指標：${esc(c.reason||'')}</p>`:`<p>想觀察：${esc(c.task||'')}</p><p>蒐證方式：${esc(c.evidence||'')}</p>`}</div>`).join('');
     body=`<div class="mini-badge" style="margin:5px 0 12px">已公布 · 全班統整</div>${stats}
       <p class="stat-note">${m.type==='reflection'?'出口票為開放式回應，不設選項長條圖。': '百分比以提交此關的人數為分母；不同判斷可以一起討論。'}</p>
-      <h4 class="comment-title">自願公開的文字回應</h4><div class="result-list">${!x.commentsOpen?'<p class="stat-note">老師尚未開放文字回應；你已可以閱讀全班選項統計。</p>':comments||'<p class="stat-note">目前沒有學員同意公開文字。大家的選項仍已納入上方統計。</p>'}</div>`;
+      <h4 class="comment-title">全班匿名觀點牆 · ${replies.length} 則</h4><div class="result-list">${comments||'<p class="stat-note">尚未有學員同意分享文字；請提醒大家勾選「同意匿名分享」並更新回答。</p>'}</div>
+      <button class="btn wall-open-btn" type="button" data-open-wall="${m.id}">▦ 開啟全螢幕觀點牆（${replies.length} 則）</button>`;
   }
   return `<aside class="right-card" id="resultsPane">
     <div class="result-top"><h3>全班觀點</h3><button class="btn ghost small" type="button" data-refresh>↻ 更新</button></div>
@@ -281,6 +426,7 @@ function renderResult(m){
   </aside>`;
 }
 function renderGame(){
+  cancelVoice(true);
   modeLabel.textContent='IN CLASS / 互動作答';headerAction.hidden=false;headerAction.textContent='切換使用者';
   headerAction.onclick=()=>{rememberDraft();state.name='';state.student=null;renderLanding();};
   const m=mission(state.currentId);const num=missionCount();
@@ -295,13 +441,16 @@ function renderGame(){
   </main>`;
   app.querySelectorAll('[data-mission]').forEach(b=>b.onclick=()=>{rememberDraft();state.currentId=b.dataset.mission;renderGame();});
   app.querySelectorAll('[data-option]').forEach(b=>b.onclick=()=>chooseOption(b.dataset.option));
+  app.querySelectorAll('[data-open-wall]').forEach(b=>b.onclick=()=>openStudentWall(b.dataset.openWall));
   el('missionForm').onsubmit=submitMission;
+  addVoiceControls();
   el('missionForm').querySelectorAll('textarea,select,input').forEach(control=>{control.addEventListener('input',rememberDraft);control.addEventListener('change',rememberDraft);});
   const next=qs('[data-next]');next.onclick=()=>{rememberDraft();const i=MISSIONS.findIndex(x=>x.id===state.currentId);state.currentId=MISSIONS[(i+1)%MISSIONS.length].id;renderGame();};
   qs('[data-refresh]').onclick=()=>refreshStudent(true);
 }
 async function submitMission(e){
   e.preventDefault();if(state.busy)return;
+  if(voiceSession){cancelVoice(false);el('formError').textContent='請先停止語音輸入，檢查辨識文字後再送出。';return;}
   rememberDraft();const m=mission(state.currentId),d=getDraft(m.id);
   const error=el('formError');error.textContent='';
   if(m.type==='choice'){
@@ -335,6 +484,7 @@ async function refreshStudent(manual=false){
 
 /* 主持教師檢視與公布 */
 function renderHostLogin(){
+  cancelVoice(true);
   modeLabel.textContent='HOST CONTROL / 教師看板';headerAction.hidden=true;
   app.innerHTML=`<main class="page-main">${demoNotice()}
     <div class="teacher-hero"><div><span class="eyebrow">FACILITATOR DESK</span><h1>主持教師看板</h1><p>掌握各關完成情況，決定何時開放全班結果。</p></div><span class="mini-badge">教師專用</span></div>
@@ -357,7 +507,7 @@ function renderHost(){
   const activeMission=(a.currentMission||MISSIONS[0].id);
   const tableRows=answers.filter(x=>x.missionId===activeMission).sort((x,y)=>(x.name||'').localeCompare(y.name||'','zh-Hant'));
   app.innerHTML=`<main class="page-main">${demoNotice()}
-    <div class="teacher-hero"><div><span class="eyebrow">LIVE CLASSROOM / COMMAND CENTER</span><h1>課堂即時結果總覽</h1><p>講師端可看姓名和完整文字；一般學員只會看到已公布的統計與同意公開的文字。</p></div>
+    <div class="teacher-hero"><div><span class="eyebrow">LIVE CLASSROOM / COMMAND CENTER</span><h1>課堂即時結果總覽</h1><p>講師端可核對完整姓名；學員觀點牆只顯示已同意分享的匿名文字。</p></div>
       <button class="btn secondary small" type="button" id="hostRefresh">↻ 更新資料</button></div>
     <div class="teacher-layout">
       <section class="teacher-card"><h2>課堂進度</h2>
@@ -367,14 +517,14 @@ function renderHost(){
         <div class="actions"><input class="text-input" style="width:125px" id="targetCount" type="number" min="0" max="200" step="1" value="${a.expectedCount||0}"><button class="btn small" type="button" id="setCount">儲存人數</button></div>
         <p class="hint">設 0 表示停用自動公布，由你逐關按「公布」。例如設定 20：某一關有 20 位學員完成時，該關自動顯示結果。</p>
       </section>
-      <section class="teacher-card"><h2>分關結果公布</h2><p>先讓大家作答，再逐關公布統計。文字回應須經填答者同意，且由教師另按「開放文字」才會顯示。</p>
-        ${MISSIONS.map(m=>{const x=a.missions?.[m.id]||{};return `<div class="teacher-mission"><div><strong>${missionIndex(m.id)}．${esc(m.short)}</strong><small>${x.count||0} 人已提交｜${x.released?'結果已開放':'結果尚未公開'}</small></div><div class="teacher-controls"><span class="mini-badge ${x.released?'':'grey'}">${x.released?'開放':'鎖定'}</span><button class="btn small secondary" data-comments="${m.id}" data-comments-value="${x.commentsOpen?'0':'1'}">${x.commentsOpen?'隱藏文字':'開放文字'}</button><button class="btn small ${x.manualReveal?'secondary':''}" data-reveal="${m.id}" data-reveal-value="${x.manualReveal?'0':'1'}">${x.manualReveal?'收回公布':'公布'}</button></div></div>`;}).join('')}
+      <section class="teacher-card"><h2>一鍵公布全班觀點牆</h2><p>先讓大家獨立作答，再按「公布觀點牆」：統計與同意分享的匿名文字會同時出現。原本未同意的舊答案不會曝光。</p>
+        ${MISSIONS.map(m=>{const x=a.missions?.[m.id]||{};return `<div class="teacher-mission"><div><strong>${missionIndex(m.id)}．${esc(m.short)}</strong><small>${x.count||0} 人已提交｜${x.released?'結果已開放':'結果尚未公開'}</small></div><div class="teacher-controls"><span class="mini-badge ${x.released?'':'grey'}">${x.released?'開放':'鎖定'}</span><button class="btn small secondary" data-host-wall="${m.id}" ${x.released?'':'disabled'}>▦ 投影觀點牆</button><button class="btn small ${x.manualReveal?'secondary':''}" data-reveal="${m.id}" data-reveal-value="${x.manualReveal?'0':'1'}">${x.manualReveal?'收回公布':'公布觀點牆'}</button></div></div>`;}).join('')}
         <p class="hint">注意：已達預計人數的關卡會自動開放；若想收回，需先將預計人數改為 0，並關閉手動公布。</p>
       </section>
       <section class="teacher-card"><h2>登入名單</h2><p>姓名僅供講師查核，學員端不會公開此名單。</p>
         <div class="teacher-roster">${people.map(x=>`<span>${esc(x.name)}</span>`).join('')||'<span>尚未有人登入</span>'}</div>
       </section>
-      <section class="teacher-card"><h2>使用方法</h2><div class="notice teal">① 分享一般連結給學員<br>② 使用看板觀察提交人數<br>③ 公布此關結果<br>④ 請學員按右側「更新」，比較全班的觀點</div>
+      <section class="teacher-card"><h2>使用方法</h2><div class="notice teal">① 分享一般連結給學員<br>② 使用看板觀察提交人數<br>③ 公布此關結果<br>④ 請學員按右側「更新」並展開觀點牆比較大家的想法</div>
         <div class="actions" style="margin-top:18px"><button class="btn secondary small" type="button" id="copyStudentLink">複製學員連結</button><button class="btn small" type="button" id="downloadCsv">匯出所有回答 CSV</button></div>
       </section>
       <section class="teacher-card full"><div class="subbar"><h2>完整作答紀錄（教師可見）</h2><select id="teacherMissionSelect" class="table-mission-select" aria-label="檢視關卡">${MISSIONS.map(m=>`<option value="${m.id}" ${m.id===activeMission?'selected':''}>${missionIndex(m.id)}．${esc(m.short)}</option>`).join('')}</select></div>
@@ -385,7 +535,7 @@ function renderHost(){
   el('hostRefresh').onclick=()=>refreshHost(true);
   el('setCount').onclick=()=>hostUpdate('expectedCount',{value:el('targetCount').value});
   app.querySelectorAll('[data-reveal]').forEach(b=>b.onclick=()=>hostUpdate('reveal',{missionId:b.dataset.reveal,value:b.dataset.revealValue==='1'}));
-  app.querySelectorAll('[data-comments]').forEach(b=>b.onclick=()=>hostUpdate('comments',{missionId:b.dataset.comments,value:b.dataset.commentsValue==='1'}));
+  app.querySelectorAll('[data-host-wall]').forEach(b=>b.onclick=()=>openHostWall(b.dataset.hostWall));
   el('teacherMissionSelect').onchange=(e)=>{state.admin.currentMission=e.target.value;renderHost();};
   el('downloadCsv').onclick=downloadCsv;
   el('copyStudentLink').onclick=()=>{const url=new URL(location.href);url.search='';url.hash='';navigator.clipboard.writeText(url.toString()).then(()=>showToast('已複製學員頁面連結。')).catch(()=>showToast('無法複製；請手動複製移除 ?mode=host 的網址。'));};
@@ -406,6 +556,85 @@ function downloadCsv(){
   const rows=[['姓名','投影片任務','選項','小組案例','判斷理由／紀錄指標','觀察事實／課後觀察','待釐清能力／課後蒐證方法','兩種蒐證方式','同意公開','更新時間'],...(state.admin?.answers||[]).map(x=>[x.name,x.missionId,(x.choices||[]).join('、'),x.area,x.reason,x.task,x.evidence,x.support,x.sharePublic?'是':'否',x.updatedAt])];
   const csv='\ufeff'+rows.map(row=>row.map(csvValue).join(',')).join('\r\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='評量偵探室_課堂作答_'+new Date().toISOString().slice(0,10)+'.csv';document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},300);
+}
+
+
+/* v4｜全班匿名觀點牆：只呈現學員明確同意分享的文字，不曝光姓名。 */
+function wallEntryHtml(m,c){
+  const choice=m.type==='choice'?`<div class="wall-tag">選擇 ${esc((c.choices||[]).join('、')||'—')}</div>`:'';
+  const area=m.type==='design'?`<div class="wall-tag">${esc(c.area||'')}</div>`:'';
+  const blocks=m.type==='choice'
+    ?`<div class="wall-copy">${esc(c.reason||'')}</div>`
+    :m.type==='design'
+    ?`<div class="wall-item-label">觀察到的表現</div><div class="wall-copy">${esc(c.task||'')}</div>
+      <div class="wall-item-label">待釐清能力</div><div class="wall-copy">${esc(c.evidence||'')}</div>
+      <div class="wall-item-label">兩種蒐證方式</div><div class="wall-copy">${esc(c.support||'')}</div>
+      <div class="wall-item-label">評量紀錄指標</div><div class="wall-copy">${esc(c.reason||'')}</div>`
+    :`<div class="wall-item-label">回到班上想觀察</div><div class="wall-copy">${esc(c.task||'')}</div>
+      <div class="wall-item-label">蒐集證據的方法</div><div class="wall-copy">${esc(c.evidence||'')}</div>`;
+  const code=(c.choices||[]).join(',');
+  return `<article class="wall-entry" data-wall-answer="${esc(code)}"><div class="wall-entry-head"><span class="wall-avatar">✦</span><strong>${esc(c.name||'匿名觀點')}</strong></div>${choice}${area}${blocks}</article>`;
+}
+function buildWall(m,result){
+  const old=document.querySelector('.wall-shade');if(old)old.remove();
+  const count=Number(result?.count||0),comments=result?.comments||[];
+  const optButtons=m.type==='choice'?`<div class="wall-filters" role="group" aria-label="篩選回答選項">
+    <button type="button" class="wall-filter selected" data-wall-filter="all">全部回答</button>
+    ${m.options.map(([id,label])=>`<button type="button" class="wall-filter" data-wall-filter="${esc(id)}">選 ${esc(id)}</button>`).join('')}</div>`:'';
+  const opts=result?.options||[];
+  const bars=opts.map(o=>{
+    const pct=count?Math.round((Number(o.count)||0)/count*100):0;
+    const label=m.type==='choice'?`${o.id}｜${o.label}`:o.label;
+    return `<div class="wall-stat"><div><b>${esc(label)}</b><span>${o.count} 人 · ${pct}%</span></div><div class="wall-track"><span style="width:${pct}%"></span></div></div>`;
+  }).join('');
+  const backdrop=document.createElement('div');backdrop.className='wall-shade';
+  const previous=document.activeElement;
+  backdrop.innerHTML=`<section class="wall-sheet" role="dialog" aria-modal="true" aria-labelledby="wallTitle" tabindex="-1">
+    <div class="wall-top"><div><span class="wall-eyebrow">CLASSROOM PERSPECTIVES / 投影片 ${esc(m.slide)}</span><h2 id="wallTitle">${esc(m.short)}｜全班觀點牆</h2><p>每個人看到同一個案例，卻可能選擇不同的評量切入點。</p></div><button type="button" class="wall-close" aria-label="關閉觀點牆">✕ 關閉</button></div>
+    <div class="wall-toolbar"><div><strong>${count} 人</strong><span>已完成本關</span></div><div><strong>${comments.length} 則</strong><span>同意匿名分享</span></div><div class="wall-prompt">${m.type==='choice'?'比較選項差異及文字判斷依據':m.type==='design'?'比較三個案例的蒐證設計':'比較各位老師想回教室觀察的項目'}</div></div>
+    ${bars?`<div class="wall-summary">${bars}</div>`:''}
+    <div class="wall-headline"><h3>大家怎麼想？</h3><span id="wallVisibleCount">${comments.length} 則觀點</span></div>
+    ${optButtons}
+    <div class="wall-grid" id="wallGrid">${comments.length?comments.map(c=>wallEntryHtml(m,c)).join(''):'<div class="wall-empty">目前沒有學員同意分享本關文字。<br>請提醒老師在原題勾選「同意匿名分享」並更新回答。</div>'}</div>
+    <p class="wall-footer-note">只顯示經填答者同意分享的文字，不顯示姓名；請勿輸入學生姓名或可辨識個案的資料。持有課堂連結的人可能看到已公布內容。</p>
+  </section>`;
+  const close=()=>{backdrop.remove();document.body.classList.remove('wall-open');document.removeEventListener('keydown',onKey);if(previous?.isConnected)previous.focus();};
+  const onKey=e=>{if(e.key==='Escape')close();};
+  backdrop.querySelector('.wall-close').onclick=close;
+  backdrop.addEventListener('click',e=>{if(e.target===backdrop)close();});
+  backdrop.querySelectorAll('[data-wall-filter]').forEach(btn=>btn.addEventListener('click',()=>{
+    const f=btn.dataset.wallFilter;
+    backdrop.querySelectorAll('[data-wall-filter]').forEach(b=>b.classList.toggle('selected',b===btn));
+    let visible=0;
+    backdrop.querySelectorAll('.wall-entry').forEach(card=>{
+      const yes=f==='all'||(card.dataset.wallAnswer||'').split(',').includes(f);
+      card.hidden=!yes;if(yes)visible++;
+    });
+    const countEl=backdrop.querySelector('#wallVisibleCount');if(countEl)countEl.textContent=visible+' 則觀點';
+  }));
+  document.body.append(backdrop);document.body.classList.add('wall-open');
+  backdrop.querySelector('.wall-sheet').focus();
+  document.addEventListener('keydown',onKey);
+}
+async function openStudentWall(missionId){
+  const m=mission(missionId),x=state.student?.missions?.[missionId];
+  if(!x?.myAnswer){showToast('請先完成這一關，再查看全班觀點。');return;}
+  if(!x?.released){showToast('老師尚未公布這一關。');return;}
+  // 重新取得最新資料，避免看見尚未更新的結果。
+  try{const r=await apiGet({action:'student',name:state.name});state.student=r;const x2=r.missions?.[missionId];if(!x2?.unlocked){showToast('全班結果尚未開放。');return;}buildWall(m,x2.result);}
+  catch(e){showToast('觀點牆讀取失敗：'+e.message);}
+}
+function openHostWall(missionId){
+  const m=mission(missionId),a=state.admin;
+  if(!a?.missions?.[missionId]?.released){showToast('請先公布這一關，再投影觀點牆。');return;}
+  const rows=(a.answers||[]).filter(x=>x.missionId===missionId);
+  const comments=rows.filter(x=>x.sharePublic).map((x,i)=>({
+    name:'匿名觀點 '+String(i+1).padStart(2,'0'),choices:x.choices||[],reason:x.reason,area:x.area,
+    task:x.task,evidence:x.evidence,support:x.support
+  }));
+  const options=m.type==='choice'?m.options.map(([id,label])=>({id,label,count:rows.filter(x=>(x.choices||[]).includes(id)).length}))
+    :m.type==='design'?m.areas.map(id=>({id,label:id,count:rows.filter(x=>x.area===id).length})):[];
+  buildWall(m,{count:rows.length,options,comments});
 }
 
 /* 頁面初始化 */
