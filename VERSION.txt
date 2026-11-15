@@ -1,0 +1,1 @@
+slidesync-2026-11-v2 | slides 02,07,10,13,15 | no data migration/destructive changes
