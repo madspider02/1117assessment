@@ -3,3 +3,7 @@
 /* 教師看板的三個控制項在窄螢幕自動折行 */
 .teacher-mission{flex-wrap:wrap}.teacher-controls{flex-wrap:wrap;justify-content:flex-end}
 @media(max-width:760px){.teacher-controls{justify-content:flex-start;width:100%}.teacher-mission{align-items:flex-start}.teacher-card.full{overflow:hidden}}
+
+/* 案例說明保留投影片中的換行 */
+.case-box{white-space:pre-line}
+.form-grid label{display:block;margin-bottom:7px}

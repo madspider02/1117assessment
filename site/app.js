@@ -5,44 +5,57 @@ const CFG = window.ASSESSMENT_GAME_CONFIG || {};
 const PARAMS = new URLSearchParams(location.search);
 const DEMO = PARAMS.get('demo') === '1' || !String(CFG.API_URL || '').trim();
 const HOST_MODE = PARAMS.get('mode') === 'host';
-const LS_DEMO = 'assessment-lab-v1-demo';
+const LS_DEMO = 'assessment-lab-slide-sync-v2-demo';
 const LS_LAST_NAME = 'assessment-lab-v1-last-name';
-const LS_DRAFT_PREFIX = 'assessment-lab-v1-draft-';
+const LS_DRAFT_PREFIX = 'assessment-lab-slide-sync-v2-draft-';
+const API_VERSION = 'slidesync-2026-11-v2';
 const MISSIONS = [
   {
-    id:'M1', short:'誰在說話？', type:'choice', section:'語言 × 溝通', title:'不回答，就代表不會溝通嗎？',
-    caseText:'小安，4 歲半。老師問「你要不要喝水？」他經常不回答；但想玩積木時，會拉著老師走到櫃子前，再指向積木。',
-    question:'如果只能先選一項，你最想進一步蒐集哪種證據？', instruction:'單選｜沒有唯一標準答案，請說明你的判斷依據。',
-    options:[['A','他能否理解日常口語指令'],['B','他是否能用口語表達自己的需求'],['C','他如何使用手勢、指認與眼神來溝通'],['D','他的握筆與剪貼能力如何']], max:1,
-    reasonLabel:'你為什麼選這一項？還想知道什麼？', insight:'先區分「已觀察到的溝通方式」與「尚未確認的語言能力」，不要用有沒有說話直接判斷溝通。'
+    id:'S02', slide:'02', short:'暖身觀察', type:'choice', section:'投影片 02｜暖身',
+    title:'孩子做不出來，究竟代表什麼？',
+    caseText:'沒有回應｜老師叫名字，孩子沒有轉頭。\n不會說｜想要玩具時，孩子拉著老師的手走向櫃子。\n剪不好｜孩子認得圓形，剪圓時卻一直偏離線條。',
+    question:'請先選一個情境：你會先「確認」哪一件事？',
+    instruction:'選一個情境，在下方寫出你最想先確認的能力或環境條件。',
+    options:[['A','沒有回應｜老師叫名字，孩子沒有轉頭'],['B','不會說｜想要玩具時，孩子拉著老師的手走向櫃子'],['C','剪不好｜孩子認得圓形，剪圓時卻一直偏離線條']],
+    max:1,reasonLabel:'請寫出：你會先「確認」哪一件事？',
+    insight:'同一個表現可能有多種解釋。請把觀察事實和需要確認的能力區分開來。'
   },
   {
-    id:'M2', short:'找出證據', type:'choice', section:'語言 × 溝通', title:'會跟著說，就表示聽懂了嗎？',
-    caseText:'小潔，5 歲。她能跟著老師重複短句，也會說出圖片名稱；但遇到兩步驟指令時常停住，在自由遊戲中也較少與同伴交談。',
-    question:'若要蒐集更有用的證據，你會優先採用哪兩種方式？', instruction:'最多選兩項｜想想哪些資料能幫助我們區分理解、表達與互動。',
-    options:[['A','在不同情境觀察她理解與執行指令的表現'],['B','只記錄她能重複多少個詞語'],['C','蒐集自由遊戲中的語言與互動樣本'],['D','直接依單次表現判定語言障礙']], max:2,
-    reasonLabel:'你會記錄什麼具體行為作為評量證據？', insight:'自然情境觀察、語言樣本與指令理解紀錄可以相互補充；重複說話不能單獨代表理解。'
+    id:'S07', slide:'07', short:'小安｜語言溝通', type:'choice', section:'投影片 07–08｜活動一',
+    title:'小安不回答老師的問題，代表什麼？',
+    caseText:'情境 A｜小安，4歲半。\n老師問：「你要不要喝水？」小安通常不回答。但想玩積木時，會拉著老師走向櫃子，並指向積木。',
+    question:'請先選一項最想「優先確認」的資訊，再說明理由。',
+    instruction:'單選 A／B／C／D；選項與投影片第7頁相同。',
+    options:[['A','是否理解老師的問題'],['B','有哪些可用的表達方式'],['C','不同對象是否有主動溝通'],['D','以上都需要確認']],
+    max:1,reasonLabel:'為什麼選這一項？下一步會怎麼蒐集證據？',
+    insight:'拉手與指物是已觀察到的溝通線索；口語理解、表達與情境差異仍需更多證據，不能直接推定障礙類別。'
   },
   {
-    id:'M3', short:'拆解動作', type:'choice', section:'知覺 × 動作', title:'剪不好，是手不好還是看不懂？',
-    caseText:'小芸，5 歲半。她能指出並說出圓形與三角形，但沿線剪圓時經常偏離線條，仿畫圖形也不夠穩定。',
-    question:'目前最值得先釐清的能力有哪些？', instruction:'最多選兩項｜選完後，請提出還需要的觀察證據。',
-    options:[['A','視知覺辨識與圖形區辨'],['B','手部控制與精細動作'],['C','視覺訊息和動作的整合'],['D','口語發音清晰度']], max:2,
-    reasonLabel:'如果要更清楚區分原因，你會再觀察什麼？', insight:'能辨認圖形，不代表執行剪貼沒有困難；要把視知覺、動作控制與視動整合分開蒐證。'
+    id:'S10', slide:'10', short:'小芸｜知覺動作', type:'choice', section:'投影片 10–11｜活動二',
+    title:'小芸剪不好，到底卡在哪裡？',
+    caseText:'情境 B｜小芸，5歲。\n小芸能指認、命名圓形。但是沿線剪圓經常偏離，畫線也容易歪斜。成人幫忙固定紙張後，剪的表現有所改善。',
+    question:'選擇一個你會加做的比較任務。',
+    instruction:'單選 A／B／C／D；選項與投影片第10頁相同。',
+    options:[['A','讓孩子做圖形配對'],['B','改用手指沿線描繪'],['C','比較剪直線、固定紙張後剪線'],['D','以上都可提供不同線索']],
+    max:1,reasonLabel:'我想排除什麼？這個比較任務可以幫助確認什麼？',
+    insight:'比較圖形配對、描線與固定紙張前後的表現，可以形成不同能力的假設；不能靠單一活動直接診斷。'
   },
   {
-    id:'M4', short:'設計觀察', type:'choice', section:'知覺 × 動作', title:'一項任務，怎麼拆成兩種觀察？',
-    caseText:'小宇能口頭描述圖片中的形狀，但按照圖卡用積木排出相同位置與方向時經常出錯。老師想釐清「辨識」與「操作」各自的表現。',
-    question:'哪一個後續評量安排最有助於釐清？', instruction:'單選｜選出最能分辨不同能力要求的做法。',
-    options:[['A','只請他多說幾次積木名稱'],['B','分別安排圖片配對與實際積木操作，觀察差異'],['C','直接判定為視知覺障礙'],['D','只記錄完成作品是否正確']], max:1,
-    reasonLabel:'這個安排能幫助你區分哪些能力？', insight:'設計「分解任務」可以降低單一活動同時要求多種能力所造成的解釋混淆。'
+    id:'S13', slide:'13', short:'小組｜評量設計', type:'design', section:'投影片 13–14｜活動三',
+    title:'請設計一份「在班上做得到」的簡易評量',
+    caseText:'A｜小沐，4歲（語言）：遊戲時能用短句要求；兩步驟指令常停在第一步，加入圖示後較能完成。\n\nB｜小晨，5歲（溝通）：點心時會伸手要餅乾；與熟悉教師互動較多，較少回應同儕的輪流邀請。\n\nC｜小晴，5歲（知覺動作）：拼圖配對尚可；穿小珠常掉落，改用大孔珠後操作比較順利。',
+    question:'三個案例擇一，完成投影片的四項討論任務。',
+    instruction:'可以個別作答，也能先在分組討論後各自送出相同或不同的判斷。',
+    areas:['A｜小沐（語言）','B｜小晨（溝通）','C｜小晴（知覺動作）'],
+    insight:'四個問題依序是：觀察事實、待釐清能力、兩種蒐證方式，以及要記錄的指標。'
   },
   {
-    id:'M5', short:'我是評量者', type:'design', section:'專業整合', title:'換你設計一個幼兒園評量活動',
-    caseText:'請從自己熟悉的幼兒園情境出發，選擇一個你最想了解的能力面向，設計一個簡短、可以在自然活動中執行的觀察方式。',
-    question:'用你的經驗，完成一張「評量任務卡」。', instruction:'不用量表名稱，也不用做障礙診斷；請寫出可實際觀察的行為與紀錄方式。',
-    areas:['語言理解','語言表達','功能性溝通','語用與互動','視知覺','精細動作','視動整合','粗大動作與協調'],
-    insight:'好的評量設計能說清楚：觀察什麼、如何蒐證、如何區分不同解釋，以及如何回到教學支持。'
+    id:'S15', slide:'15', short:'下課｜出口票', type:'reflection', section:'投影片 15｜出口票',
+    title:'讓評量從「猜問題」走向「找證據」',
+    caseText:'課程結語：先描述孩子實際做了什麼，再比較哪些條件會改變表現，最後思考下一步支持。',
+    question:'請完成投影片第15頁的出口票。',
+    instruction:'兩句話即可；這一關不設正確答案。',
+    insight:'請提出一個可在班上觀察的具體行為，並說明可以蒐集何種證據。'
   }
 ];
 const app = document.getElementById('app');
@@ -50,7 +63,7 @@ const modeLabel = document.getElementById('modeLabel');
 const headerAction = document.getElementById('headerAction');
 const credit = document.getElementById('credit');
 if(CFG.FOOTER_CREDIT) credit.textContent = CFG.FOOTER_CREDIT;
-const state = {name:'', currentId:'M1', student:null, hostPin:'', admin:null, drafts:{}, busy:false};
+const state = {name:'', currentId:'S02', student:null, hostPin:'', admin:null, drafts:{}, busy:false};
 let toastTimer;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -58,12 +71,13 @@ function formatCount(n){return Number(n||0).toLocaleString('zh-TW');}
 function el(id){return document.getElementById(id);}
 function qs(selector){return app.querySelector(selector);}
 function mission(id){return MISSIONS.find(m=>m.id===id)||MISSIONS[0];}
+function missionIndex(id){return MISSIONS.findIndex(m=>m.id===id)+1;}
 function normalizeName(s){return String(s||'').replace(/\s+/g,' ').trim();}
 function keyName(s){return normalizeName(s).normalize('NFKC').toLocaleLowerCase();}
 function showToast(msg){const t=el('toast');t.textContent=msg;t.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('visible'),4000);}
 function missionCount(){return MISSIONS.filter(m=>Boolean(state.student?.missions?.[m.id]?.myAnswer)).length;}
 function getDraft(id){return state.drafts[id]||(state.student?.missions?.[id]?.myAnswer)||{choices:[],reason:'',area:'',task:'',evidence:'',support:'',sharePublic:false};}
-function demoNotice(){return DEMO?'<div class="notice demo-notice"><strong>本機試玩模式</strong>｜尚未設定 Apps Script 網址，資料只會存在這個瀏覽器。正式全班同步前，請先完成 README 的部署步驟。</div>':'';}
+function demoNotice(){return DEMO?'<div class="notice demo-notice"><strong>本機試玩模式</strong>｜資料只保存在目前的瀏覽器，不會寫入 Google Sheet。正式全班同步請使用已部署的 GitHub Pages 網址（不要加 ?demo=1）。</div>':'';}
 function uuid(){return (crypto?.randomUUID?.() || 'r'+Date.now()+'_'+Math.random().toString(36).slice(2));}
 
 /* JSONP 僅讀取受限資料；寫入透過 no-cors POST 並使用 receipt 二次確認。 */
@@ -87,6 +101,7 @@ async function apiGet(query){
   if(DEMO) return demoGet(query);
   const data=await jsonp(query);
   if(!data||data.ok!==true)throw new Error(data?.error||'伺服器未能完成讀取。');
+  if(['health','student','admin'].includes(query.action) && data.version!==API_VERSION) throw new Error('Google Apps Script 還是舊版。請換成「投影片同步版 Code.gs」，執行 setup()，再將現有 Web App 更新到新版本。');
   return data;
 }
 const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
@@ -125,7 +140,7 @@ function getDemoTask(db,m,name){
   const rows=Object.values(db.answers).filter(x=>x.missionId===m.id);
   const myAnswer=db.answers[keyName(name)+'|'+m.id]||null;
   const released=!!db.releases[m.id] || (db.expectedCount>0&&rows.length>=db.expectedCount);
-  const options=m.type==='choice'?m.options.map(([id,label])=>({id,label,count:rows.filter(x=>x.choices.includes(id)).length})):m.areas.map(id=>({id,label:id,count:rows.filter(x=>x.area===id).length}));
+  const options=m.type==='choice'?m.options.map(([id,label])=>({id,label,count:rows.filter(x=>(x.choices||[]).includes(id)).length})):m.type==='design'?m.areas.map(id=>({id,label:id,count:rows.filter(x=>x.area===id).length})):[];
   const comments=rows.filter(x=>x.sharePublic&&db.commentsRelease?.[m.id]).map(x=>({name:x.name,reason:x.reason,area:x.area,task:x.task,evidence:x.evidence,support:x.support})).slice(-50).reverse();
   return {count:rows.length,released,commentsOpen:!!db.commentsRelease?.[m.id],unlocked:released&&!!myAnswer,myAnswer,result:released&&myAnswer?{count:rows.length,options,comments}:null};
 }
@@ -147,8 +162,8 @@ function renderLanding(){
     <section class="hero"><div class="hero-art" aria-hidden="true"></div>
       <span class="eyebrow">LANGUAGE · COMMUNICATION · PERCEPTUAL-MOTOR</span>
       <h1>孩子做不到，<br>究竟卡在哪裡？</h1>
-      <p>歡迎來到「評量偵探室」。從幼兒園日常情境出發，破解五個觀察任務，把直覺轉換成有根據的評量思考。</p>
-      <div class="hero-meta"><span><i class="dot"></i><b>5 個任務</b>｜案例判讀與設計</span><span><i class="dot"></i><b>可續答</b>｜回來修改沒問題</span><span><i class="dot"></i><b>全班結果</b>｜完成後等待公布</span></div>
+      <p>歡迎來到「評量偵探室」。內容逐題對應本週 15 頁簡報：第2、7、10、13、15頁。可以先投票，再與全班結果比較。</p>
+      <div class="hero-meta"><span><i class="dot"></i><b>5 個任務</b>｜與課堂簡報同步</span><span><i class="dot"></i><b>可續答</b>｜回來修改沒問題</span><span><i class="dot"></i><b>全班結果</b>｜完成後等待公布</span></div>
     </section>
     <section class="intro-panel">
       <div class="intro-card"><span class="eyebrow">GET STARTED</span><h2>你的評量觀察旅程，從這裡開始。</h2>
@@ -172,10 +187,11 @@ async function join(e){
   if(name.length<2||name.length>30){el('joinError').textContent='請輸入 2–30 字的姓名。';return;}
   const btn=el('joinBtn');btn.disabled=true;btn.textContent='正在讀取你的進度…';el('joinError').textContent='';
   try{
+    if(!DEMO) await apiGet({action:'health'});
     await apiPost('join',{name});
     const result=await apiGet({action:'student',name});
     if(!result.exists)throw new Error('尚未確認登入成功，請檢查後台。');
-    state.name=name;state.student=result;state.currentId='M1';state.drafts={};
+    state.name=name;state.student=result;state.currentId=MISSIONS[0].id;state.drafts={};
     try{state.drafts=JSON.parse(localStorage.getItem(LS_DRAFT_PREFIX+keyName(name))||'{}')}catch{}
     MISSIONS.forEach(m=>{const saved=result.missions?.[m.id]?.myAnswer;if(saved)state.drafts[m.id]=saved;});
     localStorage.setItem(LS_LAST_NAME,name);renderGame();showToast('歡迎回來，'+name+'！你的作答會持續保存在雲端。');
@@ -187,8 +203,10 @@ function rememberDraft(){
   if(m.type==='choice'){
     d.choices=[...app.querySelectorAll('.option.selected')].map(b=>b.dataset.option);
     d.reason=el('reason')?.value||'';
+  }else if(m.type==='design'){
+    d.area=el('fieldArea')?.value||'';d.task=el('fieldTask')?.value||'';d.evidence=el('fieldEvidence')?.value||'';d.support=el('fieldSupport')?.value||'';d.reason=el('fieldReason')?.value||'';
   }else{
-    d.area=el('fieldArea')?.value||'';d.task=el('fieldTask')?.value||'';d.evidence=el('fieldEvidence')?.value||'';d.support=el('fieldSupport')?.value||'';
+    d.task=el('fieldTask')?.value||'';d.evidence=el('fieldEvidence')?.value||'';
   }
   d.sharePublic=!!el('sharePublic')?.checked;
   state.drafts[m.id]=d;
@@ -213,21 +231,26 @@ function renderMission(m){
      <textarea id="reason" maxlength="350" placeholder="請從孩子的具體行為出發，說明你的判斷…">${esc(d.reason||'')}</textarea>
      <p class="hint">文字建議 30–100 字；只要寫出你想蒐集的證據即可。</p>`;
   const designFields=m.type==='design'?`<div class="form-grid">
-    <div><label class="form-label" for="fieldArea">① 我想了解的評量面向</label><select id="fieldArea"><option value="">請選擇一個面向</option>${m.areas.map(s=>`<option value="${esc(s)}" ${d.area===s?'selected':''}>${esc(s)}</option>`).join('')}</select></div>
-    <div><label class="form-label" for="fieldTask">② 我會安排的觀察活動</label><textarea id="fieldTask" maxlength="500" placeholder="例如：點心時間提供兩種點心，觀察孩子如何表達需求…">${esc(d.task||'')}</textarea></div>
-    <div><label class="form-label" for="fieldEvidence">③ 我要記錄的具體行為／指標</label><textarea id="fieldEvidence" maxlength="500" placeholder="例如：指認、口語、手勢；是否需要提示；在不同情境的次數…">${esc(d.evidence||'')}</textarea></div>
-    <div><label class="form-label" for="fieldSupport">④ 我會如何運用評量結果</label><textarea id="fieldSupport" maxlength="500" placeholder="例如：調整指令呈現方式、提供圖片溝通或活動分解…">${esc(d.support||'')}</textarea></div>
+    <div><label class="form-label" for="fieldArea">選擇案例｜小沐、小晨或小晴</label><select id="fieldArea"><option value="">請先選擇一個案例</option>${m.areas.map(v=>`<option value="${esc(v)}" ${d.area===v?'selected':''}>${esc(v)}</option>`).join('')}</select></div>
+    <div><label class="form-label" for="fieldTask">① 我觀察到…（觀察事實）</label><textarea id="fieldTask" maxlength="500" placeholder="寫出案例中具體、可見的行為…">${esc(d.task||'')}</textarea></div>
+    <div><label class="form-label" for="fieldEvidence">② 我想再確認…（待釐清能力）</label><textarea id="fieldEvidence" maxlength="500" placeholder="你最想區分的是哪些能力？">${esc(d.evidence||'')}</textarea></div>
+    <div><label class="form-label" for="fieldSupport">③ 我會安排…（兩種蒐證方式）</label><textarea id="fieldSupport" maxlength="500" placeholder="例如：比較有無圖示的指令理解、家庭訪談等。至少兩種。">${esc(d.support||'')}</textarea></div>
+    <div><label class="form-label" for="fieldReason">④ 我會記錄…（評量指標）</label><textarea id="fieldReason" maxlength="350" placeholder="例如：完成步驟、正確率、提示次數、情境差異…">${esc(d.reason||'')}</textarea></div>
+  </div>`:'';
+  const reflectionFields=m.type==='reflection'?`<div class="form-grid">
+    <div><label class="form-label" for="fieldTask">我最想回到班上觀察…</label><textarea id="fieldTask" maxlength="500" placeholder="例如：孩子在自由遊戲中如何主動與同儕溝通…">${esc(d.task||'')}</textarea></div>
+    <div><label class="form-label" for="fieldEvidence">我會用…來蒐集證據。</label><textarea id="fieldEvidence" maxlength="500" placeholder="例如：事件紀錄、同儕互動觀察、不同提示條件對照…">${esc(d.evidence||'')}</textarea></div>
   </div>`:'';
   return `<article class="mission-card">
-    <div class="mission-head"><span class="mission-num">MISSION ${m.id.slice(1)} <span>/ 05</span></span><span class="mini-badge">${esc(m.section)}</span></div>
+    <div class="mission-head"><span class="mission-num">任務 ${missionIndex(m.id)} <span>/ ${MISSIONS.length} · 簡報第${m.slide}頁</span></span><span class="mini-badge">${esc(m.section)}</span></div>
     <h2>${esc(m.title)}</h2><div class="case-box"><strong>CASE FILE · 觀察檔案</strong>${esc(m.caseText)}</div>
     <p class="question">${esc(m.question)}</p><p class="subquestion">${esc(m.instruction)}</p>
-    <form id="missionForm">${m.type==='choice'?choiceFields:designFields}
+    <form id="missionForm">${m.type==='choice'?choiceFields:m.type==='design'?designFields:reflectionFields}
       <label class="checkline"><input id="sharePublic" type="checkbox" ${d.sharePublic?'checked':''}>
       <span>我同意將本題的文字說明和姓名展示在全班結果中（選項統計不受此設定影響；預設不公開）。</span></label>
       <div class="mission-controls"><div><button type="submit" id="saveBtn" class="btn">${done?'更新我的回答':'送出這一關'} <span aria-hidden="true">✓</span></button>
       <p id="formError" class="error-label" role="alert"></p></div>
-      <button type="button" class="btn secondary" data-next>${m.id==='M5'?'回到第一關':'下一關 →'}</button></div>
+      <button type="button" class="btn secondary" data-next>${missionIndex(m.id)===MISSIONS.length?'回到第一關':'下一關 →'}</button></div>
     </form><hr class="quiet-line"><p class="short-note"><strong>評量提醒：</strong>${esc(m.insight)}</p>
   </article>`;
 }
@@ -246,9 +269,9 @@ function renderResult(m){
       const label=m.type==='choice'?`${o.id}　${o.label}`:o.label;
       return `<div class="result-row"><div class="result-info"><strong>${esc(label)}</strong><span>${o.count} 人 · ${pct}%</span></div><div class="result-bar" role="img" aria-label="${esc(label)}：${o.count} 人"><span style="width:${Math.round(o.count/max*100)}%"></span></div></div>`;
     }).join('');
-    const comments=(result.comments||[]).map(c=>`<div class="peer-comment"><b>${esc(c.name||'參與者')}</b>${m.type==='choice'?`<p>${esc(c.reason||'')}</p>`:`<p><strong>${esc(c.area||'')}</strong>｜${esc(c.task||'')}</p><p>紀錄：${esc(c.evidence||'')}</p><p>支持：${esc(c.support||'')}</p>`}</div>`).join('');
+    const comments=(result.comments||[]).map(c=>`<div class="peer-comment"><b>${esc(c.name||'參與者')}</b>${m.type==='choice'?`<p>${esc(c.reason||'')}</p>`:m.type==='design'?`<p><strong>${esc(c.area||'')}</strong>｜觀察：${esc(c.task||'')}</p><p>待釐清：${esc(c.evidence||'')}</p><p>蒐證方式：${esc(c.support||'')}</p><p>紀錄指標：${esc(c.reason||'')}</p>`:`<p>想觀察：${esc(c.task||'')}</p><p>蒐證方式：${esc(c.evidence||'')}</p>`}</div>`).join('');
     body=`<div class="mini-badge" style="margin:5px 0 12px">已公布 · 全班統整</div>${stats}
-      <p class="stat-note">${m.max===2?'本題可複選，因此百分比加總可能超過100%。':'百分比以提交此關的人數為分母。'}</p>
+      <p class="stat-note">${m.type==='reflection'?'出口票為開放式回應，不設選項長條圖。': '百分比以提交此關的人數為分母；不同判斷可以一起討論。'}</p>
       <h4 class="comment-title">自願公開的文字回應</h4><div class="result-list">${!x.commentsOpen?'<p class="stat-note">老師尚未開放文字回應；你已可以閱讀全班選項統計。</p>':comments||'<p class="stat-note">目前沒有學員同意公開文字。大家的選項仍已納入上方統計。</p>'}</div>`;
   }
   return `<aside class="right-card" id="resultsPane">
@@ -263,11 +286,11 @@ function renderGame(){
   const m=mission(state.currentId);const num=missionCount();
   app.innerHTML=`<main class="page-main">
     ${demoNotice()}
-    <div class="game-header"><div><span class="eyebrow">LEARNING BY INVESTIGATING</span><h1 class="game-title">評量偵探室｜五個觀察任務</h1></div><div class="user-pill">目前身分：<b>${esc(state.name)}</b></div></div>
+    <div class="game-header"><div><span class="eyebrow">LEARNING BY INVESTIGATING</span><h1 class="game-title">評量偵探室｜投影片同步五關</h1></div><div class="user-pill">目前身分：<b>${esc(state.name)}</b></div></div>
     <div class="game-layout"><nav class="mission-nav" aria-label="切換關卡"><p class="panel-label">YOUR MISSIONS</p>
     ${MISSIONS.map((x,i)=>`<button type="button" class="mission-link ${x.id===m.id?'active':''}" data-mission="${x.id}" ${x.id===m.id?'aria-current="step"':''}>
        <span class="nav-number">${i+1}</span><span class="nav-text"><strong>${esc(x.short)}</strong><small>${esc(x.section)}</small></span><span class="check">${state.student.missions?.[x.id]?.myAnswer?'✓':''}</span></button>`).join('')}
-       <div class="count-card"><b>${num} <span style="font-size:13px;color:#c1e2d0">/ 5</span></b><p>已完成的觀察任務</p><div class="meter"><span style="width:${num/5*100}%"></span></div></div>
+       <div class="count-card"><b>${num} <span style="font-size:13px;color:#c1e2d0">/ ${MISSIONS.length}</span></b><p>已完成的觀察任務</p><div class="meter"><span style="width:${num/MISSIONS.length*100}%"></span></div></div>
     </nav>${renderMission(m)}${renderResult(m)}</div>
   </main>`;
   app.querySelectorAll('[data-mission]').forEach(b=>b.onclick=()=>{rememberDraft();state.currentId=b.dataset.mission;renderGame();});
@@ -285,8 +308,10 @@ async function submitMission(e){
     if(!d.choices?.length){error.textContent='請先選擇至少一個選項。';return;}
     if(String(d.reason||'').trim().length<6){error.textContent='請至少用 6 個字說明你的判斷。';return;}
   }else{
-    if(!d.area||!d.task?.trim()||!d.evidence?.trim()||!d.support?.trim()){error.textContent='請完成評量面向、觀察活動、紀錄指標及教學支持四個欄位。';return;}
-    if(d.task.trim().length<6||d.evidence.trim().length<6||d.support.trim().length<6){error.textContent='請將每個文字欄位寫得再具體一些（至少 6 字）。';return;}
+    if(m.type==='design'){
+      if(!d.area||!d.task?.trim()||!d.evidence?.trim()||!d.support?.trim()||!d.reason?.trim()){error.textContent='請選擇案例並完成四個討論問題。';return;}
+      if([d.task,d.evidence,d.support,d.reason].some(x=>String(x).trim().length<6)){error.textContent='四個文字回應請各寫至少6字。';return;}
+    }else if(!d.task?.trim()||!d.evidence?.trim()||d.task.trim().length<6||d.evidence.trim().length<6){error.textContent='請完成出口票的兩句話（每句至少6字）。';return;}
   }
   state.busy=true;el('saveBtn').disabled=true;el('saveBtn').textContent='正在儲存到 Google Sheet…';
   try{
@@ -295,7 +320,7 @@ async function submitMission(e){
     const saved=state.student.missions?.[m.id]?.myAnswer;
     if(!saved)throw new Error('找不到最新作答；請更新查看是否已儲存。');
     state.drafts[m.id]=saved;
-    renderGame();showToast('第 '+m.id.slice(1)+' 關已儲存！下次用同一姓名可以繼續修改。');
+    renderGame();showToast('第 '+missionIndex(m.id)+' 關已儲存！下次用同一姓名可以繼續修改。');
   }catch(err){if(el('formError'))el('formError').textContent=err.message||'儲存失敗';if(el('saveBtn')){el('saveBtn').disabled=false;el('saveBtn').textContent='重新送出這一關';}}
   finally{state.busy=false;}
 }
@@ -328,8 +353,8 @@ async function hostLogin(e){
 function renderHost(){
   modeLabel.textContent='HOST CONTROL / 教師看板';headerAction.hidden=false;headerAction.textContent='登出教師看板';headerAction.onclick=()=>{state.hostPin='';state.admin=null;renderHostLogin();};
   const a=state.admin||{},people=a.participants||[],answers=a.answers||[];
-  const totalDone=answers.length;
-  const activeMission=(a.currentMission||'M1');
+  const totalDone=answers.filter(x=>MISSIONS.some(m=>m.id===x.missionId)).length;
+  const activeMission=(a.currentMission||MISSIONS[0].id);
   const tableRows=answers.filter(x=>x.missionId===activeMission).sort((x,y)=>(x.name||'').localeCompare(y.name||'','zh-Hant'));
   app.innerHTML=`<main class="page-main">${demoNotice()}
     <div class="teacher-hero"><div><span class="eyebrow">LIVE CLASSROOM / COMMAND CENTER</span><h1>課堂即時結果總覽</h1><p>講師端可看姓名和完整文字；一般學員只會看到已公布的統計與同意公開的文字。</p></div>
@@ -343,7 +368,7 @@ function renderHost(){
         <p class="hint">設 0 表示停用自動公布，由你逐關按「公布」。例如設定 20：某一關有 20 位學員完成時，該關自動顯示結果。</p>
       </section>
       <section class="teacher-card"><h2>分關結果公布</h2><p>先讓大家作答，再逐關公布統計。文字回應須經填答者同意，且由教師另按「開放文字」才會顯示。</p>
-        ${MISSIONS.map(m=>{const x=a.missions?.[m.id]||{};return `<div class="teacher-mission"><div><strong>${m.id.slice(1)}．${esc(m.short)}</strong><small>${x.count||0} 人已提交｜${x.released?'結果已開放':'結果尚未公開'}</small></div><div class="teacher-controls"><span class="mini-badge ${x.released?'':'grey'}">${x.released?'開放':'鎖定'}</span><button class="btn small secondary" data-comments="${m.id}" data-comments-value="${x.commentsOpen?'0':'1'}">${x.commentsOpen?'隱藏文字':'開放文字'}</button><button class="btn small ${x.manualReveal?'secondary':''}" data-reveal="${m.id}" data-reveal-value="${x.manualReveal?'0':'1'}">${x.manualReveal?'收回公布':'公布'}</button></div></div>`;}).join('')}
+        ${MISSIONS.map(m=>{const x=a.missions?.[m.id]||{};return `<div class="teacher-mission"><div><strong>${missionIndex(m.id)}．${esc(m.short)}</strong><small>${x.count||0} 人已提交｜${x.released?'結果已開放':'結果尚未公開'}</small></div><div class="teacher-controls"><span class="mini-badge ${x.released?'':'grey'}">${x.released?'開放':'鎖定'}</span><button class="btn small secondary" data-comments="${m.id}" data-comments-value="${x.commentsOpen?'0':'1'}">${x.commentsOpen?'隱藏文字':'開放文字'}</button><button class="btn small ${x.manualReveal?'secondary':''}" data-reveal="${m.id}" data-reveal-value="${x.manualReveal?'0':'1'}">${x.manualReveal?'收回公布':'公布'}</button></div></div>`;}).join('')}
         <p class="hint">注意：已達預計人數的關卡會自動開放；若想收回，需先將預計人數改為 0，並關閉手動公布。</p>
       </section>
       <section class="teacher-card"><h2>登入名單</h2><p>姓名僅供講師查核，學員端不會公開此名單。</p>
@@ -352,9 +377,9 @@ function renderHost(){
       <section class="teacher-card"><h2>使用方法</h2><div class="notice teal">① 分享一般連結給學員<br>② 使用看板觀察提交人數<br>③ 公布此關結果<br>④ 請學員按右側「更新」，比較全班的觀點</div>
         <div class="actions" style="margin-top:18px"><button class="btn secondary small" type="button" id="copyStudentLink">複製學員連結</button><button class="btn small" type="button" id="downloadCsv">匯出所有回答 CSV</button></div>
       </section>
-      <section class="teacher-card full"><div class="subbar"><h2>完整作答紀錄（教師可見）</h2><select id="teacherMissionSelect" class="table-mission-select" aria-label="檢視關卡">${MISSIONS.map(m=>`<option value="${m.id}" ${m.id===activeMission?'selected':''}>${m.id.slice(1)}．${esc(m.short)}</option>`).join('')}</select></div>
-      <div class="scroll-table"><table class="answer-table"><thead><tr><th>姓名</th><th>選擇／面向</th><th>理由／觀察活動</th><th>紀錄指標</th><th>支援方向</th><th>公開同意</th></tr></thead><tbody>
-      ${tableRows.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.choices?.length?x.choices.join('、'):x.area||'—')}</td><td>${esc(x.reason||x.task||'')}</td><td>${esc(x.evidence||'—')}</td><td>${esc(x.support||'—')}</td><td>${x.sharePublic?'同意':'不公開'}</td></tr>`).join('')||'<tr><td colspan="6">這一關還沒有作答紀錄。</td></tr>'}
+      <section class="teacher-card full"><div class="subbar"><h2>完整作答紀錄（教師可見）</h2><select id="teacherMissionSelect" class="table-mission-select" aria-label="檢視關卡">${MISSIONS.map(m=>`<option value="${m.id}" ${m.id===activeMission?'selected':''}>${missionIndex(m.id)}．${esc(m.short)}</option>`).join('')}</select></div>
+      <div class="scroll-table"><table class="answer-table"><thead><tr><th>姓名</th><th>選擇／案例</th><th>理由／紀錄指標</th><th>觀察事實／課後觀察</th><th>待釐清／蒐證方法</th><th>兩種蒐證方式</th><th>公開同意</th></tr></thead><tbody>
+      ${tableRows.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.choices?.length?x.choices.join('、'):x.area||'—')}</td><td>${esc(x.reason||'—')}</td><td>${esc(x.task||'—')}</td><td>${esc(x.evidence||'—')}</td><td>${esc(x.support||'—')}</td><td>${x.sharePublic?'同意':'不公開'}</td></tr>`).join('')||'<tr><td colspan="7">這一關還沒有作答紀錄。</td></tr>'}
       </tbody></table></div></section>
     </div></main>`;
   el('hostRefresh').onclick=()=>refreshHost(true);
@@ -367,18 +392,18 @@ function renderHost(){
 }
 async function refreshHost(manual=false){
   if(state.busy)return;
-  try{const x=await apiGet({action:'admin',pin:state.hostPin});x.currentMission=state.admin?.currentMission||'M1';state.admin=x;renderHost();if(manual)showToast('已取得最新的課堂作答。');}
+  try{const x=await apiGet({action:'admin',pin:state.hostPin});x.currentMission=state.admin?.currentMission||MISSIONS[0].id;state.admin=x;renderHost();if(manual)showToast('已取得最新的課堂作答。');}
   catch(err){if(manual)showToast('看板更新失敗：'+err.message);}
 }
 async function hostUpdate(operation,rest){
   if(state.busy)return;state.busy=true;
-  try{await apiPost('hostUpdate',{pin:state.hostPin,operation,...rest});const x=await apiGet({action:'admin',pin:state.hostPin});x.currentMission=state.admin?.currentMission||'M1';state.admin=x;renderHost();showToast('設定已更新。');}
+  try{await apiPost('hostUpdate',{pin:state.hostPin,operation,...rest});const x=await apiGet({action:'admin',pin:state.hostPin});x.currentMission=state.admin?.currentMission||MISSIONS[0].id;state.admin=x;renderHost();showToast('設定已更新。');}
   catch(err){showToast('設定未確認：'+err.message);}
   finally{state.busy=false;}
 }
 function csvValue(s){return '"'+String(s??'').replace(/"/g,'""').replace(/^[=+\-@]/,'\'$&')+'"';}
 function downloadCsv(){
-  const rows=[['姓名','任務','選項','評量面向','判斷理由','觀察活動','紀錄指標','教學支持','同意公開','更新時間'],...(state.admin?.answers||[]).map(x=>[x.name,x.missionId,(x.choices||[]).join('、'),x.area,x.reason,x.task,x.evidence,x.support,x.sharePublic?'是':'否',x.updatedAt])];
+  const rows=[['姓名','投影片任務','選項','小組案例','判斷理由／紀錄指標','觀察事實／課後觀察','待釐清能力／課後蒐證方法','兩種蒐證方式','同意公開','更新時間'],...(state.admin?.answers||[]).map(x=>[x.name,x.missionId,(x.choices||[]).join('、'),x.area,x.reason,x.task,x.evidence,x.support,x.sharePublic?'是':'否',x.updatedAt])];
   const csv='\ufeff'+rows.map(row=>row.map(csvValue).join(',')).join('\r\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='評量偵探室_課堂作答_'+new Date().toISOString().slice(0,10)+'.csv';document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},300);
 }
